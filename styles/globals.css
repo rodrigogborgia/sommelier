@@ -1,0 +1,26 @@
+/*
+  ESTILOS GLOBALES DE ESPACIO SOMMELIER
+*/
+html,
+body {
+  /* Fondo negro puro para que toda la ventana se vea oscura */
+  background-color: #000000; 
+  /* Aseguramos que la página ocupe el 100% del viewport (ventana) */
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* Establecemos el color de texto por defecto */
+  color: #f3f4f6; 
+}
+
+/* Directivas estándar de Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos personalizados que ya tenías */
+li {
+  list-style-type: square;
+  margin-left: 30px;
+  padding: 2px;
+}
