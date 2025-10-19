@@ -1,86 +1,178 @@
-from flask import Flask, request, jsonify
-# Importamos la clase para crear la plantilla de prompt
-from langchain.prompts import PromptTemplate 
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import Chroma
-from langchain.chains import ConversationalRetrievalChain
-from flask_cors import CORS 
+    import os
+    import json
+    import logging
+    import base64
+    from flask import Flask, request, jsonify
+    from flask_cors import CORS
+    from dotenv import load_dotenv
 
-# --- Configuración RAG ---
-CHROMA_PATH = "chroma_db" 
-EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-3-small")
-LLM = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.2) 
+    # Importaciones de LangChain para RAG y Gemini
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain_community.document_loaders import PyPDFLoader, TextLoader
+    from langchain_community.vectorstores import Chroma
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+    from langchain.chains import ConversationalRetrievalChain, RetrievalQA
+    from langchain.memory import ConversationBufferMemory
 
-try:
-    # Cargar la base de datos de conocimiento 
-    DB = Chroma(persist_directory=CHROMA_PATH, embedding_function=EMBEDDINGS)
-except Exception as e:
-    print("\n❌ ERROR CRÍTICO: La base de datos 'chroma_db' no se encontró o no se pudo cargar.")
-    print("Asegúrate de ejecutar 'python3.11 indexer.py' con éxito antes de correr el servidor.")
-    exit()
+    # --- Configuración Inicial ---
+    load_dotenv()
 
-# Definición de la personalidad del avatar (System Prompt)
-# Agregamos las variables {context} y {question} para el prompt
-SYSTEM_PROMPT_TEXT = """
-Tu nombre es Sammy, y eres una sommelier de carnes altamente calificada.
-Tu objetivo es guiar una cata de carnes y responder preguntas de los participantes basándote 
-EXCLUSIVAMENTE en el contexto que se te proporciona de los documentos de la cata.
+    # Asegúrate de que la clave de API de Google Gemini esté disponible
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        # Esto es crítico para Render, si la variable de entorno falta
+        logging.error("GEMINI_API_KEY no está configurada. La aplicación fallará.")
+        raise ValueError("GEMINI_API_KEY no está configurada.")
 
-INSTRUCCIONES CLAVE:
-1. Siempre debes responder en ESPAÑOL.
-2. Sé formal, amigable y muy concisa.
-3. Limita tus respuestas a un máximo de 3 oraciones cortas.
-4. Si la pregunta no se puede responder con la información proporcionada (el contexto), 
-   responde: "Esa información no está en mis documentos de cata. ¿Puedo ayudarte con otra pregunta sobre carnes?"
-5. No menciones que utilizas documentos o bases de datos vectoriales.
+    # Configuración de Logging
+    logging.basicConfig(level=logging.INFO)
 
-Contexto: {context}
-Pregunta: {question}
-"""
+    app = Flask(__name__)
+    # Permitir CORS para que Vercel pueda comunicarse con Render
+    CORS(app)
 
-# CREACIÓN CLAVE: Convertimos la cadena de texto en un objeto PromptTemplate
-CUSTOM_PROMPT = PromptTemplate.from_template(SYSTEM_PROMPT_TEXT)
+    # --- Configuración de RAG (Vector Database y Chain) ---
+    CHROMA_PATH = "chroma"
+    DOCS_PATH = "docs"
+    vectorstore = None
+    rag_chain = None
 
-RAG_CHAIN = ConversationalRetrievalChain.from_llm(
-    llm=LLM, 
-    retriever=DB.as_retriever(search_kwargs={"k": 3}),  # Busca los 3 trozos más relevantes
-    # Pasamos el objeto PromptTemplate corregido
-    combine_docs_chain_kwargs={"prompt": CUSTOM_PROMPT}, 
-    verbose=False
-)
+    def setup_rag():
+        """Inicializa el sistema RAG (vector store y chain)."""
+        global vectorstore, rag_chain
+        logging.info("Iniciando setup_rag...")
 
-# --- Configuración del Servidor Flask ---
-app = Flask(__name__)
-# Habilitar CORS para permitir la comunicación con HeyGen
-CORS(app) 
+        # 1. Comprobar si la base de datos Chroma ya existe
+        if os.path.exists(CHROMA_PATH) and os.path.isdir(CHROMA_PATH):
+            logging.info("Base de datos Chroma existente detectada. Cargando...")
+            try:
+                # Reutilizar la base de datos existente
+                vectorstore = Chroma(
+                    persist_directory=CHROMA_PATH,
+                    embedding_function=GoogleGenerativeAIEmbeddings(model="text-embedding-004")
+                )
+            except Exception as e:
+                logging.error(f"Error al cargar Chroma DB existente: {e}. Reconstruyendo...")
+                vectorstore = None
+        
+        # Si no existe o falló al cargar, se crea la base de datos
+        if vectorstore is None:
+            logging.info("Construyendo nueva base de datos Chroma...")
+            
+            documents = []
+            
+            # Cargar documentos (solo PDF para el ejemplo)
+            for filename in os.listdir(DOCS_PATH):
+                filepath = os.path.join(DOCS_PATH, filename)
+                if filename.endswith(".pdf"):
+                    try:
+                        loader = PyPDFLoader(filepath)
+                        documents.extend(loader.load())
+                        logging.info(f"Cargado: {filename}")
+                    except Exception as e:
+                        logging.error(f"Error al cargar PDF {filename}: {e}")
+                elif filename.endswith(".txt"):
+                    # Para archivos de texto simples
+                    try:
+                        loader = TextLoader(filepath)
+                        documents.extend(loader.load())
+                        logging.info(f"Cargado: {filename}")
+                    except Exception as e:
+                        logging.error(f"Error al cargar TXT {filename}: {e}")
 
-# Lista para almacenar el historial de conversación (es crucial para RAG)
-chat_history = [] 
+            if not documents:
+                logging.warning("No se encontraron documentos en la carpeta 'docs'. El RAG no tendrá contexto.")
+                return
 
-@app.route('/api/ask', methods=['POST'])
-def ask_avatar():
-    global chat_history
+            # Dividir documentos en chunks para la incrustación
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+            split_documents = text_splitter.split_documents(documents)
+            logging.info(f"Documentos divididos en {len(split_documents)} trozos.")
+
+            # Crear y persistir el vector store
+            vectorstore = Chroma.from_documents(
+                documents=split_documents,
+                embedding=GoogleGenerativeAIEmbeddings(model="text-embedding-004"),
+                persist_directory=CHROMA_PATH
+            )
+            vectorstore.persist()
+            logging.info("Base de datos Chroma creada y persistida.")
+
+        # 2. Inicializar el modelo y la cadena
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+        
+        # Usar RetrievalQA para manejar solo la consulta sin historial
+        rag_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff", # 'stuff' es simple y bueno para contexto pequeño/mediano
+            retriever=vectorstore.as_retriever(search_kwargs={"k": 3}), # Busca los 3 chunks más relevantes
+            return_source_documents=False # No necesitamos devolver las fuentes al HeyGen
+        )
+        logging.info("Chain de RetrievalQA inicializada.")
+
+
+    # Inicialización de RAG al iniciar la aplicación
+    with app.app_context():
+        setup_rag()
+
+
+    @app.route('/api/rag', methods=['POST'])
+    def rag_endpoint():
+        """
+        Endpoint principal para recibir la pregunta de HeyGen y devolver la respuesta RAG.
+        
+        Espera un JSON con la pregunta del usuario.
+        """
+        try:
+            data = request.json
+            
+            # La pregunta del usuario viene en el campo 'prompt'
+            user_prompt = data.get('prompt')
+            
+            if not user_prompt:
+                return jsonify({"error": "No prompt provided"}), 400
+
+            logging.info(f"Pregunta recibida: {user_prompt}")
+
+            # 1. Ejecutar la consulta RAG
+            if rag_chain is None:
+                 # Si no se pudo configurar el RAG, se usa solo Gemini
+                 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+                 response_text = llm.invoke(user_prompt).content
+                 logging.warning("RAG no disponible. Usando solo Gemini para la respuesta.")
+            else:
+                # Ejecución normal de la cadena de conocimiento (RAG)
+                response = rag_chain.invoke({"query": user_prompt})
+                response_text = response['result']
+            
+            logging.info(f"Respuesta generada: {response_text}")
+
+            # 2. Construir la respuesta final para HeyGen
+            # HeyGen requiere la respuesta en un formato específico (voice, text)
+            
+            # --- CONFIGURACIÓN DE VOZ (CRÍTICA PARA ESPAÑOL) ---
+            # Asegura que el avatar hable con un tono de español (LATAM) para la fluidez.
+            HEYGEN_VOICE_CONFIG = {
+                "voice_id": "es-US-Standard-B", # Voz femenina estándar en español (LATAM)
+                "style": "Friendly",             # Tono amigable
+                "pitch": "medium",               # Tono medio
+                "speed": "medium",               # Velocidad media
+            }
+            
+            # Formato de respuesta requerido por HeyGen
+            response_data = {
+                "text": response_text,
+                "config": HEYGEN_VOICE_CONFIG
+            }
+            
+            # 3. Devolver la respuesta a HeyGen
+            return jsonify(response_data), 200
+
+        except Exception as e:
+            logging.error(f"Error interno en el endpoint RAG: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    if __name__ == '__main__':
+        # Esto es solo para pruebas locales, Render usará Gunicorn/Waitress
+        app.run(host='0.0.0.0', port=5000)
     
-    data = request.get_json()
-    user_question = data.get('question')
-
-    if not user_question:
-        return jsonify({"answer": "Por favor, envía una pregunta."}), 400
-
-    # Ejecuta la cadena RAG con el historial
-    result = RAG_CHAIN.invoke(
-        {"question": user_question, "chat_history": chat_history}
-    )
-    
-    response_text = result['answer']
-
-    # Actualiza el historial
-    chat_history.append((user_question, response_text))
-    
-    # Devuelve la respuesta en formato JSON
-    return jsonify({"answer": response_text})
-
-
-if __name__ == '__main__':
-    # El servidor correrá en el puerto 5000 (localhost:5000)
-    app.run(debug=True, port=5000)
