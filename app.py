@@ -6,23 +6,24 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# Importaciones de LangChain para RAG y Gemini
+# Importaciones de LangChain para RAG y OpenAI (CORREGIDO)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.vectorstores import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+# CAMBIO CLAVE: Usamos OpenAI para Embeddings y LLM
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI 
 from langchain.chains import ConversationalRetrievalChain, RetrievalQA
 from langchain.memory import ConversationBufferMemory
 
 # --- Configuración Inicial ---
 load_dotenv()
 
-# Asegúrate de que la clave de API de Google Gemini esté disponible
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
+# Asegúrate de que la clave de API de OpenAI esté disponible (CORREGIDO)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
     # Esto es crítico para Render, si la variable de entorno falta
-    logging.error("GEMINI_API_KEY no está configurada. La aplicación fallará.")
-    raise ValueError("GEMINI_API_KEY no está configurada.")
+    logging.error("OPENAI_API_KEY no está configurada. La aplicación fallará.")
+    raise ValueError("OPENAI_API_KEY no está configurada.")
 
 # Configuración de Logging
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +43,9 @@ def setup_rag():
     global vectorstore, rag_chain
     logging.info("Iniciando setup_rag...")
 
+    # Define el motor de Embeddings de OpenAI (CORREGIDO)
+    openai_embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
+
     # 1. Comprobar si la base de datos Chroma ya existe
     if os.path.exists(CHROMA_PATH) and os.path.isdir(CHROMA_PATH):
         logging.info("Base de datos Chroma existente detectada. Cargando...")
@@ -49,7 +53,7 @@ def setup_rag():
             # Reutilizar la base de datos existente
             vectorstore = Chroma(
                 persist_directory=CHROMA_PATH,
-                embedding_function=GoogleGenerativeAIEmbeddings(model="text-embedding-004")
+                embedding_function=openai_embeddings # CORREGIDO
             )
         except Exception as e:
             logging.error(f"Error al cargar Chroma DB existente: {e}. Reconstruyendo...")
@@ -98,14 +102,15 @@ def setup_rag():
         # Crear y persistir el vector store
         vectorstore = Chroma.from_documents(
             documents=split_documents,
-            embedding=GoogleGenerativeAIEmbeddings(model="text-embedding-004"),
+            embedding=openai_embeddings, # CORREGIDO
             persist_directory=CHROMA_PATH
         )
         vectorstore.persist()
         logging.info("Base de datos Chroma creada y persistida.")
 
-    # 2. Inicializar el modelo y la cadena
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+    # 2. Inicializar el modelo y la cadena (CORREGIDO)
+    # Usamos gpt-3.5-turbo de OpenAI
+    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.2)
     
     # Usar RetrievalQA para manejar solo la consulta sin historial
     rag_chain = RetrievalQA.from_chain_type(
@@ -142,10 +147,10 @@ def rag_endpoint():
 
         # 1. Ejecutar la consulta RAG
         if rag_chain is None:
-             # Si no se pudo configurar el RAG, se usa solo Gemini
-             llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+             # Si no se pudo configurar el RAG, se usa solo el LLM de OpenAI (CORREGIDO)
+             llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.2)
              response_text = llm.invoke(user_prompt).content
-             logging.warning("RAG no disponible. Usando solo Gemini para la respuesta.")
+             logging.warning("RAG no disponible. Usando solo OpenAI para la respuesta.")
         else:
             # Ejecución normal de la cadena de conocimiento (RAG)
             response = rag_chain.invoke({"query": user_prompt})
