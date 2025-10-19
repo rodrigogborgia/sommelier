@@ -61,6 +61,11 @@
             
             documents = []
             
+            # --- FIX: Verificar que la carpeta docs exista antes de intentar leerla ---
+            if not os.path.exists(DOCS_PATH):
+                logging.warning(f"Directorio de documentos no encontrado: {DOCS_PATH}. El RAG no tendrá contexto local.")
+                return
+
             # Cargar documentos (solo PDF para el ejemplo)
             for filename in os.listdir(DOCS_PATH):
                 filepath = os.path.join(DOCS_PATH, filename)
@@ -175,4 +180,3 @@
     if __name__ == '__main__':
         # Esto es solo para pruebas locales, Render usará Gunicorn/Waitress
         app.run(host='0.0.0.0', port=5000)
-    
