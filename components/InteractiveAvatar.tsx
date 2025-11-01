@@ -33,7 +33,7 @@ const DEFAULT_CONFIG: StartAvatarRequest = {
     // Velocidad de voz
     rate: 1.5, 
     // Emoción de la voz
-    emotion: VoiceEmotion.CALM, 
+    emotion: VoiceEmotion.Serious, 
     model: ElevenLabsModel.eleven_flash_v2_5,
   },
   // Lenguaje fijo: Español
