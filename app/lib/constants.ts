@@ -3,7 +3,7 @@
 export const AVATARS = [
   {
     // Usamos un avatar público temporal que SÍ permite streaming para probar el código.
-    avatar_id: "076323a0c6a140f8b86aef887d875f88", 
+    avatar_id: "Dexter_Lawyer_Sitting_public", 
     name: "Sammy",
   },
 ];
