@@ -1,0 +1,69 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Deploy backend to server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            . \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/sommelier_backend/
+
+      - name: Install dependencies on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            cd /srv/sommelier_backend && pip install -r requirements.txt
+          "
+
+      - name: Copy systemd service file
+        run: |
+          scp deploy/sommelier_backend.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/sommelier_backend.service
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo mv /tmp/sommelier_backend.service /etc/systemd/system/sommelier_backend.service &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl restart sommelier_backend.service
+          "
+
+      - name: Healthcheck backend
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            curl -f http://127.0.0.1:5000/api/get-access-token || exit 1
+          "
+
+      - name: Collect logs
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo journalctl -u sommelier_backend.service -n 50 --no-pager > /tmp/backend.log
+          "
+          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend.log .
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-logs
+          path: backend.log
