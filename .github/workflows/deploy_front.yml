@@ -42,8 +42,22 @@ jobs:
             cd /srv/nextapp && npm ci --production
           "
 
-      - name: Restart frontend service
+      - name: Copy systemd service file
         run: |
+          scp deploy/nextapp.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nextapp.service
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo systemctl daemon-reload && sudo systemctl restart nextapp.service
+            sudo mv /tmp/nextapp.service /etc/systemd/system/nextapp.service &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl restart nextapp.service
+          "
+
+      - name: Copy Nginx config
+        run: |
+          scp deploy/tusommeliervirtual.com.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/tusommeliervirtual.com.conf
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo mv /tmp/tusommeliervirtual.com.conf /etc/nginx/sites-available/tusommeliervirtual.com.conf &&
+            sudo rm -f /etc/nginx/sites-enabled/tusommeliervirtual.com.conf &&
+            sudo ln -s /etc/nginx/sites-available/tusommeliervirtual.com.conf /etc/nginx/sites-enabled/ &&
+            sudo nginx -t &&
+            sudo systemctl reload nginx
           "
