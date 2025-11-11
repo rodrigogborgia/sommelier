@@ -21,23 +21,17 @@ import { MessageHistory } from "./AvatarSession/MessageHistory";
 
 import { AVATARS } from "@/app/lib/constants";
 
-// CONFIGURACIÓN PREDETERMINADA: FIJAMOS LOS VALORES
+// CONFIGURACIÓN PREDETERMINADA
 const DEFAULT_CONFIG: StartAvatarRequest = {
-  // Configuración de calidad
-  quality: AvatarQuality.Low, 
-  // Elige el avatar por defecto que quieres usar (cargado de constants.ts)
+  quality: AvatarQuality.Low,
   avatarName: AVATARS[0].avatar_id,
-  // No usamos knowledgeId porque el conocimiento lo proporciona tu servidor Flask (RAG)
-  knowledgeId: undefined, 
+  knowledgeId: undefined, // el conocimiento lo da tu backend (RAG)
   voice: {
-    // Velocidad de voz
-    rate: 1.5, 
-    // Emoción de la voz
-    emotion: VoiceEmotion.SERIOUS, 
+    rate: 1.5,
+    emotion: VoiceEmotion.SERIOUS,
     model: ElevenLabsModel.eleven_flash_v2_5,
   },
-  // Lenguaje fijo: Español
-  language: "es-AR", 
+  language: "es-AR",
   voiceChatTransport: VoiceChatTransport.WEBSOCKET,
   sttSettings: {
     provider: STTProvider.DEEPGRAM,
@@ -49,20 +43,21 @@ function InteractiveAvatar() {
     useStreamingAvatarSession();
   const { startVoiceChat } = useVoiceChat();
 
-  const [config, setConfig] = useState<StartAvatarRequest>(DEFAULT_CONFIG);
-
+  const [config] = useState<StartAvatarRequest>(DEFAULT_CONFIG);
   const mediaStream = useRef<HTMLVideoElement>(null);
 
-  // FUNCIÓN PARA OBTENER EL TOKEN DE HEYGEN
+  // FUNCIÓN PARA OBTENER EL TOKEN DESDE TU BACKEND
   async function fetchAccessToken() {
     try {
-      const response = await fetch("/api/get-access-token", {
-        method: "POST",
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/get-access-token`,
+        { method: "POST" }
+      );
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${await response.text()}`);
+      }
       const token = await response.text();
-
       console.log("Access Token:", token);
-
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
@@ -76,36 +71,36 @@ function InteractiveAvatar() {
       const avatar = initAvatar(newToken);
 
       // --- LISTENERS DE EVENTOS ---
-      avatar.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
-        console.log("Avatar started talking", e);
-      });
-      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-        console.log("Avatar stopped talking", e);
-      });
-      avatar.on(StreamingEvents.STREAM_DISCONNECTED, () => {
-        console.log("Stream disconnected");
-      });
-      avatar.on(StreamingEvents.STREAM_READY, (event) => {
-        console.log(">>>>> Stream ready:", event.detail);
-      });
-      avatar.on(StreamingEvents.USER_START, (event) => {
-        console.log(">>>>> User started talking:", event);
-      });
-      avatar.on(StreamingEvents.USER_STOP, (event) => {
-        console.log(">>>>> User stopped talking:", event);
-      });
-      avatar.on(StreamingEvents.USER_END_MESSAGE, (event) => {
-        console.log(">>>>> User end message:", event);
-      });
-      avatar.on(StreamingEvents.USER_TALKING_MESSAGE, (event) => {
-        console.log(">>>>> User talking message:", event);
-      });
-      avatar.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (event) => {
-        console.log(">>>>> Avatar talking message:", event);
-      });
-      avatar.on(StreamingEvents.AVATAR_END_MESSAGE, (event) => {
-        console.log(">>>>> Avatar end message:", event);
-      });
+      avatar.on(StreamingEvents.AVATAR_START_TALKING, (e) =>
+        console.log("Avatar started talking", e)
+      );
+      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, (e) =>
+        console.log("Avatar stopped talking", e)
+      );
+      avatar.on(StreamingEvents.STREAM_DISCONNECTED, () =>
+        console.log("Stream disconnected")
+      );
+      avatar.on(StreamingEvents.STREAM_READY, (event) =>
+        console.log(">>>>> Stream ready:", event.detail)
+      );
+      avatar.on(StreamingEvents.USER_START, (event) =>
+        console.log(">>>>> User started talking:", event)
+      );
+      avatar.on(StreamingEvents.USER_STOP, (event) =>
+        console.log(">>>>> User stopped talking:", event)
+      );
+      avatar.on(StreamingEvents.USER_END_MESSAGE, (event) =>
+        console.log(">>>>> User end message:", event)
+      );
+      avatar.on(StreamingEvents.USER_TALKING_MESSAGE, (event) =>
+        console.log(">>>>> User talking message:", event)
+      );
+      avatar.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (event) =>
+        console.log(">>>>> Avatar talking message:", event)
+      );
+      avatar.on(StreamingEvents.AVATAR_END_MESSAGE, (event) =>
+        console.log(">>>>> Avatar end message:", event)
+      );
       // --- FIN LISTENERS ---
 
       await startAvatar(config);
@@ -139,13 +134,13 @@ function InteractiveAvatar() {
             <AvatarVideo ref={mediaStream} />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-                <p className="text-xl text-gray-400">
-                    Listo para comenzar la asesoría con el Sommelier IA de Carnes.
-                </p>
-              </div>
+              <p className="text-xl text-gray-400">
+                Listo para comenzar la asesoría con el Sommelier IA de Carnes.
+              </p>
+            </div>
           )}
         </div>
-        
+
         <div className="flex flex-col gap-3 items-center justify-center p-4 border-t border-zinc-700 w-full">
           {sessionState === StreamingAvatarSessionState.CONNECTED ? (
             <AvatarControls />
@@ -172,7 +167,6 @@ function InteractiveAvatar() {
 
 export default function InteractiveAvatarWrapper() {
   return (
-    // *** CAMBIO CRÍTICO: Revertimos a NEXT_PUBLIC_BASE_API_URL ("https://api.heygen.com") ***
     <StreamingAvatarProvider basePath={process.env.NEXT_PUBLIC_BASE_API_URL}>
       <InteractiveAvatar />
     </StreamingAvatarProvider>
