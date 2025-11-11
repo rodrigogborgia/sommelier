@@ -19,7 +19,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build frontend
         run: npm run build
@@ -33,11 +33,17 @@ jobs:
         run: |
           rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
-            .next public package.json \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/front/
+            .next public package.json package-lock.json \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/nextapp/
+
+      - name: Install dependencies on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            cd /srv/nextapp && npm ci --production
+          "
 
       - name: Restart frontend service
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo systemctl restart sommelier_front.service
+            sudo systemctl daemon-reload && sudo systemctl restart nextapp.service
           "
