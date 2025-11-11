@@ -6,10 +6,19 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Node modules
-node_modules
-.next
-out
+# Node modules / Next.js build
+node_modules/
+.next/
+out/
+
+# Environment files
+.env
+.env.*
+!.env.example
 
 # Sentry Build Plugin Token
 .env.sentry-build-plugin
+
+# OS / Editor junk
+.DS_Store
+.vscode/
