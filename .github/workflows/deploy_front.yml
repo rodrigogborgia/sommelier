@@ -61,3 +61,36 @@ jobs:
             sudo nginx -t &&
             sudo systemctl reload nginx
           "
+
+      - name: Healthcheck frontend
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            curl -f http://127.0.0.1:3000 || exit 1
+          "
+
+      - name: Healthcheck backend
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            curl -f http://127.0.0.1:8000/api/health || exit 1
+          "
+
+      - name: Healthcheck domain
+        run: |
+          curl -f https://tusommeliervirtual.com || exit 1
+
+      - name: Collect logs
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo journalctl -u nextapp.service -n 50 --no-pager > /tmp/nextapp.log &&
+            sudo tail -n 50 /var/log/nginx/error.log > /tmp/nginx-error.log
+          "
+          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nextapp.log .
+          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nginx-error.log .
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-logs
+          path: |
+            nextapp.log
+            nginx-error.log
