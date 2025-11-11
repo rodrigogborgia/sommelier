@@ -1,0 +1,16 @@
+[Unit]
+Description=Next.js frontend for Sommelier
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/home/sommelier/front
+ExecStart=npm run start -- -p 3000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
