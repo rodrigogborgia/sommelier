@@ -4,10 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-# Carpeta donde Actions copia tu app
 WorkingDirectory=/srv/nextapp
-# Comando para arrancar Next.js en modo producción
-ExecStart=/usr/bin/node node_modules/.bin/next start -p 3000
+ExecStart=/usr/bin/npm run start -- -p 3000
 Restart=always
 Environment=NODE_ENV=production
 

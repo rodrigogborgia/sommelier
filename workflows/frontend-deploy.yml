@@ -32,18 +32,21 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           rsync -avz --delete \
-            .next/ package.json \
+            .next/ package.json package-lock.json \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/nextapp
 
       - name: Deploy service file
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
           rsync deploy/nextapp.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/nextapp.service
           ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "sudo mv /tmp/nextapp.service /etc/systemd/system/nextapp.service && sudo systemctl daemon-reload && sudo systemctl enable nextapp.service"
+
+      - name: Install dependencies on server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /srv/nextapp && npm ci --production"
 
       - name: Restart service
         env:
