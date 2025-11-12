@@ -18,3 +18,7 @@ out/
 
 # Sentry Build Plugin Token
 .env.sentry-build-plugin
+
+# macOS system files
+.DS_Store
+**/.DS_Store
