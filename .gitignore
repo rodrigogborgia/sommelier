@@ -6,7 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Node modules / Next.js build
+# Node modules / Next.js build (solo si alguna vez se mezclan)
 node_modules/
 .next/
 out/
@@ -22,3 +22,19 @@ out/
 # macOS system files
 .DS_Store
 **/.DS_Store
+
+# Python virtual environments
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
