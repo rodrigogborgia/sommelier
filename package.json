@@ -1,12 +1,12 @@
 {
-  "name": "next-app-template",
-  "version": "0.0.1",
+  "name": "tusommeliervirtual",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+    "lint": "next lint"
   },
   "dependencies": {
     "@heygen/streaming-avatar": "^2.0.13",

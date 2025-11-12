@@ -68,12 +68,6 @@ jobs:
             curl -f http://127.0.0.1:3000 || exit 1
           "
 
-      - name: Healthcheck backend
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            curl -f http://127.0.0.1:8000/api/health || exit 1
-          "
-
       - name: Healthcheck domain
         run: |
           curl -f https://tusommeliervirtual.com || exit 1
