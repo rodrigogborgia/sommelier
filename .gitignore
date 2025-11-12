@@ -18,8 +18,3 @@ out/
 
 # Sentry Build Plugin Token
 .env.sentry-build-plugin
-
-# OS / Editor junk
-.DS_Store
-.vscode/
-.env
