@@ -12,7 +12,7 @@ jobs:
       HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
 
     steps:
-      - name: 📥 Checkout completo
+      - name: 📥 Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install local dependencies
         run: pip install -r requirements.txt
 
       - name: 🔑 Setup SSH agent
@@ -31,17 +31,13 @@ jobs:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
       - name: 🔑 Debug SSH agent
-        run: |
-          echo "➡️ Claves cargadas en el agente:"
-          ssh-add -l || echo "❌ No hay claves cargadas"
+        run: ssh-add -l || echo "❌ No hay claves cargadas"
 
       - name: 🛡️ Add server to known_hosts
-        run: |
-          echo "${{ secrets.SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+        run: echo "${{ secrets.SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
 
-      - name: 🚀 Deploy backend to server
+      - name: 🚀 Rsync backend to server
         run: |
-          echo "➡️ Copiando código al servidor..."
           rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=yes" \
             . \
@@ -49,7 +45,6 @@ jobs:
 
       - name: 📦 Install dependencies on server
         run: |
-          echo "➡️ Instalando dependencias en el servidor..."
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             cd /srv/sommelier_backend &&
             python3 -m venv venv &&
@@ -59,7 +54,6 @@ jobs:
 
       - name: ⚙️ Copy systemd service file
         run: |
-          echo "➡️ Copiando y configurando servicio systemd..."
           scp -o StrictHostKeyChecking=yes deploy/sommelier_backend.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/sommelier_backend.service
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo sed -i 's|OPENAI_API_KEY=.*|Environment=OPENAI_API_KEY=${OPENAI_API_KEY}|' /tmp/sommelier_backend.service &&
@@ -68,66 +62,28 @@ jobs:
             sudo systemctl daemon-reload
           "
 
-      - name: 🧹 Clean old Gunicorn processes (debug)
-        run: |
-          echo "➡️ Matando procesos Gunicorn huérfanos (modo debug)..."
-          ssh -vvv -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            echo '✅ Conexión establecida, usuario:' && whoami &&
-            sudo pkill -9 -f gunicorn || true
-          "
-
       - name: 🔄 Restart backend service
         run: |
-          echo "➡️ Reiniciando servicio backend..."
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo systemctl restart sommelier_backend.service
           "
 
-      - name: 🔍 Verify check_backend.sh exists
+      - name: 🩺 Healthcheck backend
         run: |
-          echo "📂 Buscando deploy/check_backend.sh..."
-          ls -l deploy/check_backend.sh || (echo "❌ No existe en el workspace" && exit 1)
-
-      - name: 🩺 Healthcheck backend (verbose)
-        run: |
-          echo "➡️ Ejecutando healthcheck en /health..."
           scp -o StrictHostKeyChecking=yes deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             chmod +x /tmp/check_backend.sh &&
             sed -i 's|/api/health|/health|' /tmp/check_backend.sh &&
-            bash -x /tmp/check_backend.sh > /tmp/backend_check_verbose.log 2>&1
+            bash /tmp/check_backend.sh > /tmp/backend_check.log 2>&1
           "
-          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check_verbose.log .
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check.log .
 
-      - name: 📜 Collect logs (last 50 lines)
+      - name: 📜 Collect logs
         run: |
-          echo "➡️ Obteniendo últimos 50 logs..."
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo journalctl -u sommelier_backend.service -n 50 --no-pager > /tmp/backend.log
           "
           scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend.log .
-
-      - name: 📜 Collect extended logs (last hour)
-        run: |
-          echo "➡️ Obteniendo logs de la última hora..."
-          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo journalctl -u sommelier_backend.service --since '1 hour ago' --no-pager > /tmp/backend_full.log
-          "
-          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_full.log .
-
-      - name: 🛠️ Check systemd service status
-        run: |
-          echo "➡️ Estado del servicio systemd..."
-          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            systemctl status sommelier_backend.service --no-pager
-          "
-
-      - name: 🔌 Check backend port
-        run: |
-          echo "➡️ Verificando puerto 5000..."
-          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo lsof -i -P -n | grep LISTEN | grep 5000 || echo '⚠️ Backend no está escuchando en 5000'
-          "
 
       - name: 📤 Upload logs
         uses: actions/upload-artifact@v4
@@ -135,29 +91,18 @@ jobs:
           name: backend-logs
           path: backend.log
 
-      - name: 📤 Upload extended logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-extended-logs
-          path: backend_full.log
-
       - name: 📤 Upload healthcheck results
         uses: actions/upload-artifact@v4
         with:
           name: backend-healthcheck
-          path: backend_check_verbose.log
+          path: backend_check.log
 
       - name: ✅ Validate backend health
         run: |
-          echo "➡️ Validando artefactos y estado del backend..."
-
-          # Revisar healthcheck
-          if ! grep -q '"status": "ok"' backend_check_verbose.log; then
+          if ! grep -q '"status": "ok"' backend_check.log; then
             echo "❌ Healthcheck no devolvió OK"
             exit 1
           fi
-
-          # Revisar logs por errores comunes
           if grep -q "Address already in use" backend.log; then
             echo "❌ Error de puerto ocupado detectado en logs"
             exit 1
@@ -166,5 +111,4 @@ jobs:
             echo "❌ Traceback detectado en logs"
             exit 1
           fi
-
           echo "✅ Backend validado correctamente"
