@@ -112,7 +112,8 @@ jobs:
 
       - name: ✅ Validate backend health
         run: |
-          if ! grep -q '"status": "ok"' backend_check.log; then
+          sudo apt-get update && sudo apt-get install -y jq
+          if [ "$(jq -r '.status' backend_check.log)" != "ok" ]; then
             echo "❌ Healthcheck no devolvió OK"
             exit 1
           fi
