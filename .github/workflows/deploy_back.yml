@@ -65,7 +65,7 @@ jobs:
       - name: 🔄 Restart backend service
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo systemctl restart sommelier_backend.service
+            sudo systemctl restart sommelier_backend.service || true
           "
 
       - name: 🩺 Healthcheck backend
