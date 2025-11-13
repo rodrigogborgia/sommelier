@@ -43,6 +43,7 @@ for filename in os.listdir(pdf_dir):
 @app.route("/health", methods=["GET"])
 def health():
     """Endpoint de healthcheck estándar"""
+    # Devuelve exactamente lo que el workflow espera
     return jsonify({"status": "ok"}), 200
 
 @app.route("/api/get-access-token", methods=["GET"])
