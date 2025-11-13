@@ -70,13 +70,11 @@ jobs:
 
       - name: 🩺 Healthcheck backend
         run: |
-          scp -o StrictHostKeyChecking=yes deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/check_backend.sh
+          # Ejecutar healthcheck y guardar solo la respuesta JSON
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            chmod +x /home/sommelier/check_backend.sh &&
-            sed -i 's|/api/health|/health|' /home/sommelier/check_backend.sh &&
-            bash /home/sommelier/check_backend.sh > /home/sommelier/backend_check.log 2>&1
+            curl -s http://127.0.0.1:5000/health > /home/sommelier/backend_check.json
           "
-          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/backend_check.log .
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/backend_check.json .
 
       - name: 📜 Collect logs (last 50 lines)
         run: |
@@ -108,12 +106,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-healthcheck
-          path: backend_check.log
+          path: backend_check.json
 
       - name: ✅ Validate backend health
         run: |
           sudo apt-get update && sudo apt-get install -y jq
-          if [ "$(jq -r '.status' backend_check.log)" != "ok" ]; then
+          if [ "$(jq -r '.status' backend_check.json)" != "ok" ]; then
             echo "❌ Healthcheck no devolvió OK"
             exit 1
           fi
