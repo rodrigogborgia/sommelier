@@ -57,6 +57,10 @@ jobs:
 
       - name: Healthcheck backend
         run: |
+          if [ ! -f deploy/check_backend.sh ]; then
+            echo "❌ Error: deploy/check_backend.sh no existe en el repo"
+            exit 1
+          fi
           scp deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             chmod +x /tmp/check_backend.sh &&
