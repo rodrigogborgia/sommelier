@@ -76,6 +76,16 @@ jobs:
           "
           scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/backend_check.json .
 
+      - name: ⚙️ Copy Nginx config
+        run: |
+          scp -o StrictHostKeyChecking=yes deploy/sommelier_nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/sommelier_nginx.conf
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo mv /home/sommelier/sommelier_nginx.conf /etc/nginx/sites-available/sommelier_nginx.conf &&
+            sudo ln -sf /etc/nginx/sites-available/sommelier_nginx.conf /etc/nginx/sites-enabled/sommelier_nginx.conf &&
+            sudo nginx -t &&
+            sudo systemctl reload nginx
+          "
+
       - name: 📜 Collect logs (last 50 lines)
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
