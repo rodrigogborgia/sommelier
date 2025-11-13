@@ -59,10 +59,11 @@ jobs:
             sudo systemctl daemon-reload
           "
 
-      - name: 🧹 Clean old Gunicorn processes
+      - name: 🧹 Clean old Gunicorn processes (debug)
         run: |
-          echo "➡️ Matando procesos Gunicorn huérfanos..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          echo "➡️ Matando procesos Gunicorn huérfanos (modo debug)..."
+          ssh -vvv -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            echo '✅ Conexión establecida, usuario:' && whoami &&
             sudo pkill -9 -f gunicorn || true
           "
 
