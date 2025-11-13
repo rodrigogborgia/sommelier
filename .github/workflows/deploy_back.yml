@@ -70,9 +70,9 @@ jobs:
 
       - name: 🩺 Healthcheck backend
         run: |
-          # Ejecutar healthcheck y guardar solo la respuesta JSON
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            curl -s http://127.0.0.1:5000/health > /home/sommelier/backend_check.json
+            sleep 5 &&
+            curl -s --fail http://127.0.0.1:5000/health > /home/sommelier/backend_check.json || echo '{\"status\":\"fail\"}' > /home/sommelier/backend_check.json
           "
           scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/backend_check.json .
 
