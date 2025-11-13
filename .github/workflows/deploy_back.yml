@@ -35,18 +35,22 @@ jobs:
           echo "➡️ Claves cargadas en el agente:"
           ssh-add -l || echo "❌ No hay claves cargadas"
 
+      - name: 🛡️ Add server to known_hosts
+        run: |
+          echo "${{ secrets.SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+
       - name: 🚀 Deploy backend to server
         run: |
           echo "➡️ Copiando código al servidor..."
           rsync -avz --delete \
-            -e "ssh -o StrictHostKeyChecking=no" \
+            -e "ssh -o StrictHostKeyChecking=yes" \
             . \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/sommelier_backend/
 
       - name: 📦 Install dependencies on server
         run: |
           echo "➡️ Instalando dependencias en el servidor..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             cd /srv/sommelier_backend &&
             python3 -m venv venv &&
             source venv/bin/activate &&
@@ -56,8 +60,8 @@ jobs:
       - name: ⚙️ Copy systemd service file
         run: |
           echo "➡️ Copiando y configurando servicio systemd..."
-          scp deploy/sommelier_backend.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/sommelier_backend.service
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          scp -o StrictHostKeyChecking=yes deploy/sommelier_backend.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/sommelier_backend.service
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo sed -i 's|OPENAI_API_KEY=.*|Environment=OPENAI_API_KEY=${OPENAI_API_KEY}|' /tmp/sommelier_backend.service &&
             sudo sed -i 's|HEYGEN_API_KEY=.*|Environment=HEYGEN_API_KEY=${HEYGEN_API_KEY}|' /tmp/sommelier_backend.service &&
             sudo mv /tmp/sommelier_backend.service /etc/systemd/system/sommelier_backend.service &&
@@ -67,7 +71,7 @@ jobs:
       - name: 🧹 Clean old Gunicorn processes (debug)
         run: |
           echo "➡️ Matando procesos Gunicorn huérfanos (modo debug)..."
-          ssh -vvv -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -vvv -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             echo '✅ Conexión establecida, usuario:' && whoami &&
             sudo pkill -9 -f gunicorn || true
           "
@@ -75,7 +79,7 @@ jobs:
       - name: 🔄 Restart backend service
         run: |
           echo "➡️ Reiniciando servicio backend..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo systemctl restart sommelier_backend.service
           "
 
@@ -87,41 +91,41 @@ jobs:
       - name: 🩺 Healthcheck backend (verbose)
         run: |
           echo "➡️ Ejecutando healthcheck en /health..."
-          scp deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          scp -o StrictHostKeyChecking=yes deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             chmod +x /tmp/check_backend.sh &&
             sed -i 's|/api/health|/health|' /tmp/check_backend.sh &&
             bash -x /tmp/check_backend.sh > /tmp/backend_check_verbose.log 2>&1
           "
-          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check_verbose.log .
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check_verbose.log .
 
       - name: 📜 Collect logs (last 50 lines)
         run: |
           echo "➡️ Obteniendo últimos 50 logs..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo journalctl -u sommelier_backend.service -n 50 --no-pager > /tmp/backend.log
           "
-          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend.log .
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend.log .
 
       - name: 📜 Collect extended logs (last hour)
         run: |
           echo "➡️ Obteniendo logs de la última hora..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo journalctl -u sommelier_backend.service --since '1 hour ago' --no-pager > /tmp/backend_full.log
           "
-          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_full.log .
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_full.log .
 
       - name: 🛠️ Check systemd service status
         run: |
           echo "➡️ Estado del servicio systemd..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             systemctl status sommelier_backend.service --no-pager
           "
 
       - name: 🔌 Check backend port
         run: |
           echo "➡️ Verificando puerto 5000..."
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo lsof -i -P -n | grep LISTEN | grep 5000 || echo '⚠️ Backend no está escuchando en 5000'
           "
 
