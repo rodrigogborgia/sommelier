@@ -6,7 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Node modules / Next.js build (solo si alguna vez se mezclan)
+# Node modules / Next.js build
 node_modules/
 .next/
 out/
