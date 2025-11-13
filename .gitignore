@@ -38,3 +38,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Asegurar que el script de deploy siempre se incluya
+!deploy/check_backend.sh
