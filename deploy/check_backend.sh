@@ -4,8 +4,8 @@ set -e
 echo "🔍 Verificando backend..."
 
 # Health principal (si falla, corta el job)
-echo "➡️  Chequeando /api/health..."
-curl -f http://127.0.0.1:5000/api/health
+echo "➡️  Chequeando /health..."
+curl -f http://127.0.0.1:5000/health
 
 # Validación opcional del token (si falla, no corta el job)
 echo "➡️  Chequeando /api/get-access-token..."
