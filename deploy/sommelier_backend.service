@@ -14,7 +14,10 @@ WorkingDirectory=/srv/sommelier_backend
 Environment=OPENAI_API_KEY=changeme
 Environment=HEYGEN_API_KEY=changeme
 
-# Activar entorno virtual
+# Matar procesos huérfanos de Gunicorn en puerto 5000 antes de arrancar
+ExecStartPre=/bin/bash -c "pkill -f 'gunicorn.*5000' || true"
+
+# Activar entorno virtual y lanzar Gunicorn
 ExecStart=/srv/sommelier_backend/venv/bin/gunicorn \
           --workers 3 \
           --bind 0.0.0.0:5000 \
