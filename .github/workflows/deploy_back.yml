@@ -57,17 +57,13 @@ jobs:
             sudo systemctl restart sommelier_backend.service
           "
 
-      - name: List repo files
+      - name: Verify check_backend.sh exists
         run: |
-          echo "📂 Archivos en el workspace:"
-          ls -R
+          echo "📂 Buscando deploy/check_backend.sh..."
+          ls -l deploy/check_backend.sh || (echo "❌ No existe en el workspace" && exit 1)
 
       - name: Healthcheck backend (verbose)
         run: |
-          if [ ! -f deploy/check_backend.sh ]; then
-            echo "❌ Error: deploy/check_backend.sh no existe en el repo"
-            exit 1
-          fi
           scp deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             chmod +x /tmp/check_backend.sh &&
