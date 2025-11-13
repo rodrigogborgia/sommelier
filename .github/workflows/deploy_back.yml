@@ -30,6 +30,11 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
+      - name: 🔑 Debug SSH agent
+        run: |
+          echo "➡️ Claves cargadas en el agente:"
+          ssh-add -l || echo "❌ No hay claves cargadas"
+
       - name: 🚀 Deploy backend to server
         run: |
           echo "➡️ Copiando código al servidor..."
