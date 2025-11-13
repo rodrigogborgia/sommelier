@@ -62,7 +62,7 @@ jobs:
           echo "📂 Archivos en el workspace:"
           ls -R
 
-      - name: Healthcheck backend
+      - name: Healthcheck backend (verbose)
         run: |
           if [ ! -f deploy/check_backend.sh ]; then
             echo "❌ Error: deploy/check_backend.sh no existe en el repo"
@@ -71,16 +71,35 @@ jobs:
           scp deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             chmod +x /tmp/check_backend.sh &&
-            /tmp/check_backend.sh > /tmp/backend_check.log 2>&1
+            bash -x /tmp/check_backend.sh > /tmp/backend_check_verbose.log 2>&1
           "
-          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check.log .
+          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check_verbose.log .
 
-      - name: Collect logs
+      - name: Collect logs (last 50 lines)
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo journalctl -u sommelier_backend.service -n 50 --no-pager > /tmp/backend.log
           "
           scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend.log .
+
+      - name: Collect extended logs (last hour)
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo journalctl -u sommelier_backend.service --since '1 hour ago' --no-pager > /tmp/backend_full.log
+          "
+          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_full.log .
+
+      - name: Check systemd service status
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            systemctl status sommelier_backend.service --no-pager
+          "
+
+      - name: Check backend port
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo lsof -i -P -n | grep LISTEN | grep 5000 || echo '⚠️ Backend no está escuchando en 5000'
+          "
 
       - name: Upload logs
         uses: actions/upload-artifact@v4
@@ -88,8 +107,14 @@ jobs:
           name: backend-logs
           path: backend.log
 
+      - name: Upload extended logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-extended-logs
+          path: backend_full.log
+
       - name: Upload healthcheck results
         uses: actions/upload-artifact@v4
         with:
           name: backend-healthcheck
-          path: backend_check.log
+          path: backend_check_verbose.log
