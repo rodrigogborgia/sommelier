@@ -31,9 +31,7 @@ for filename in os.listdir(pdf_dir):
         for page_num, page in enumerate(doc):
             text = page.get_text()
             if text.strip():
-                # Usamos IDs únicos por archivo + página
                 doc_id = f"{filename}_{page_num}"
-                # Evitamos duplicados si ya existe
                 if not collection.get(ids=[doc_id])["ids"]:
                     collection.add(
                         documents=[text],
@@ -42,32 +40,19 @@ for filename in os.listdir(pdf_dir):
                     )
         doc.close()
 
-
-@app.route("/api/health", methods=["GET"])
+@app.route("/health", methods=["GET"])
 def health():
-    """Endpoint de healthcheck"""
+    """Endpoint de healthcheck estándar"""
     return jsonify({"status": "ok"}), 200
-
 
 @app.route("/api/get-access-token", methods=["GET"])
 def get_access_token():
-    """
-    Proxy seguro hacia HeyGen.
-    En producción deberías implementar la llamada real a la API de HeyGen.
-    Aquí devolvemos un mock si la clave existe.
-    """
     if not HEYGEN_API_KEY:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
-
-    # TODO: implementar llamada real a HeyGen API
     return jsonify({"access_token": "mocked_token"}), 200
-
 
 @app.route("/api/ask", methods=["POST"])
 def ask():
-    """
-    Recibe una pregunta y busca la respuesta en la base ChromaDB.
-    """
     data = request.get_json()
     question = data.get("question", "")
 
@@ -80,14 +65,12 @@ def ask():
     )
 
     if results["documents"]:
-        # Devolvemos el documento más relevante
         return jsonify({
             "answer": results["documents"][0][0],
             "source": results["metadatas"][0][0]
         }), 200
     else:
         return jsonify({"answer": "No encontré información en los PDFs."}), 200
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
