@@ -38,7 +38,10 @@ jobs:
       - name: Install dependencies on server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            cd /srv/sommelier_backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+            cd /srv/sommelier_backend &&
+            python3 -m venv venv &&
+            source venv/bin/activate &&
+            pip install -r requirements.txt
           "
 
       - name: Copy systemd service file
@@ -54,9 +57,12 @@ jobs:
 
       - name: Healthcheck backend
         run: |
+          scp deploy/check_backend.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/check_backend.sh
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            curl -f http://127.0.0.1:5000/api/health || exit 1
+            chmod +x /tmp/check_backend.sh &&
+            /tmp/check_backend.sh > /tmp/backend_check.log 2>&1
           "
+          scp ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/backend_check.log .
 
       - name: Collect logs
         run: |
@@ -70,3 +76,9 @@ jobs:
         with:
           name: backend-logs
           path: backend.log
+
+      - name: Upload healthcheck results
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-healthcheck
+          path: backend_check.log
