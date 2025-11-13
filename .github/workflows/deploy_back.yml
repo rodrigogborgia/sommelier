@@ -55,6 +55,11 @@ jobs:
             sudo systemctl restart sommelier_backend.service
           "
 
+      - name: List repo files
+        run: |
+          echo "📂 Archivos en el workspace:"
+          ls -R
+
       - name: Healthcheck backend
         run: |
           if [ ! -f deploy/check_backend.sh ]; then
