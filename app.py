@@ -109,6 +109,24 @@ def send_message():
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
+# HeyGen: generar token temporal
+# -------------------------------
+@app.route("/api/get-access-token", methods=["POST"])
+def get_access_token():
+    """Genera un token temporal de HeyGen para el frontend"""
+    if not HEYGEN_API_KEY:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/streaming.createToken",
+            headers={"X-Api-Key": HEYGEN_API_KEY}
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# -------------------------------
 # Preguntas a PDFs
 # -------------------------------
 @app.route("/api/ask", methods=["POST"])
