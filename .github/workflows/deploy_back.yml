@@ -92,11 +92,11 @@ jobs:
       - name: ✅ Validate access token
         run: |
           sudo apt-get update && sudo apt-get install -y jq
-          if [ "$(jq -r '.access_token' access_token_check.json)" == "null" ]; then
-            echo "❌ No se recibió access_token en la respuesta"
+          if [ "$(jq -r '.data.token' access_token_check.json)" == "null" ]; then
+            echo "❌ No se recibió token en la respuesta"
             exit 1
           fi
-          echo "✅ Access token recibido correctamente"
+          echo "✅ Token recibido correctamente"
 
       - name: ⚙️ Copy Nginx config
         run: |
