@@ -40,10 +40,16 @@ for filename in os.listdir(pdf_dir):
                     )
         doc.close()
 
+# Healthcheck original
 @app.route("/health", methods=["GET"])
 def health():
     """Endpoint de healthcheck estándar"""
-    # Devuelve exactamente lo que el workflow espera
+    return jsonify({"status": "ok"}), 200
+
+# Nuevo healthcheck bajo /api/healthcheck
+@app.route("/api/healthcheck", methods=["GET"])
+def api_healthcheck():
+    """Endpoint de healthcheck para frontend/Nginx"""
     return jsonify({"status": "ok"}), 200
 
 @app.route("/api/get-access-token", methods=["GET"])
