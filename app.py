@@ -63,4 +63,90 @@ def get_avatars():
     try:
         response = requests.get(
             "https://api.heygen.com/v1/avatars",
-            headers={"X
+            headers={"X-Api-Key": api_key}
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/create-session", methods=["POST"])
+def create_session():
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+
+    payload = request.get_json() or {}
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/session",
+            headers={"X-Api-Key": api_key},
+            json=payload
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/send-message", methods=["POST"])
+def send_message():
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+
+    payload = request.get_json() or {}
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/session/message",
+            headers={"X-Api-Key": api_key},
+            json=payload
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get-access-token", methods=["POST"])
+def get_access_token():
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/streaming.create_token",
+            headers={"X-Api-Key": api_key}
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# -------------------------------
+# Preguntas a PDFs
+# -------------------------------
+@app.route("/api/ask", methods=["POST"])
+def ask():
+    data = request.get_json()
+    question = data.get("question", "")
+
+    if not question.strip():
+        return jsonify({"error": "Pregunta vacía"}), 400
+
+    results = collection.query(
+        query_texts=[question],
+        n_results=3
+    )
+
+    if results["documents"]:
+        return jsonify({
+            "answer": results["documents"][0][0],
+            "source": results["metadatas"][0][0]
+        }), 200
+    else:
+        return jsonify({"answer": "No encontré información en los PDFs."}), 200
+
+# -------------------------------
+# Main
+# -------------------------------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=PORT)
