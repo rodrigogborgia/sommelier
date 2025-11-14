@@ -11,9 +11,8 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
 
-# Variables de entorno
+# Variables de entorno globales
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
 PORT = int(os.getenv("PORT", 5000))
 CHROMADB_PATH = os.getenv("CHROMADB_PATH", "./chroma_db")
 
@@ -46,12 +45,10 @@ for filename in os.listdir(pdf_dir):
 # -------------------------------
 @app.route("/health", methods=["GET"])
 def health():
-    """Endpoint de healthcheck estándar"""
     return jsonify({"status": "ok"}), 200
 
 @app.route("/api/healthcheck", methods=["GET"])
 def api_healthcheck():
-    """Endpoint de healthcheck para frontend/Nginx"""
     return jsonify({"status": "ok"}), 200
 
 # -------------------------------
@@ -59,14 +56,14 @@ def api_healthcheck():
 # -------------------------------
 @app.route("/api/avatars", methods=["GET"])
 def get_avatars():
-    """Lista de avatares disponibles en HeyGen"""
-    if not HEYGEN_API_KEY:
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
 
     try:
         response = requests.get(
             "https://api.heygen.com/v1/avatars",
-            headers={"X-Api-Key": HEYGEN_API_KEY}
+            headers={"X-Api-Key": api_key}
         )
         return jsonify(response.json()), response.status_code
     except Exception as e:
@@ -75,15 +72,15 @@ def get_avatars():
 
 @app.route("/api/create-session", methods=["POST"])
 def create_session():
-    """Crea una sesión de avatar parlante en HeyGen"""
-    if not HEYGEN_API_KEY:
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
 
     payload = request.get_json() or {}
     try:
         response = requests.post(
             "https://api.heygen.com/v1/session",
-            headers={"X-Api-Key": HEYGEN_API_KEY},
+            headers={"X-Api-Key": api_key},
             json=payload
         )
         return jsonify(response.json()), response.status_code
@@ -93,38 +90,33 @@ def create_session():
 
 @app.route("/api/send-message", methods=["POST"])
 def send_message():
-    """Envía un mensaje a la sesión activa de HeyGen"""
-    if not HEYGEN_API_KEY:
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
 
     payload = request.get_json() or {}
     try:
         response = requests.post(
             "https://api.heygen.com/v1/session/message",
-            headers={"X-Api-Key": HEYGEN_API_KEY},
+            headers={"X-Api-Key": api_key},
             json=payload
         )
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -------------------------------
-# HeyGen: generar token temporal
-# -------------------------------
+
 @app.route("/api/get-access-token", methods=["POST"])
 def get_access_token():
-    """Genera un token temporal de HeyGen para el frontend"""
-    if not HEYGEN_API_KEY:
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
 
     try:
-        # Llamada a HeyGen para crear token de streaming
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.create_token",  # ✅ corregido: guion bajo
-            headers={"X-Api-Key": HEYGEN_API_KEY}
+            "https://api.heygen.com/v1/streaming.create_token",
+            headers={"X-Api-Key": api_key}
         )
-
-        # Devuelve el JSON tal cual lo manda HeyGen
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
