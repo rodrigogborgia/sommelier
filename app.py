@@ -116,9 +116,15 @@ def get_access_token():
             "https://api.heygen.com/v1/streaming.create_token",
             headers={"X-Api-Key": api_key}
         )
-        return jsonify(response.json()), response.status_code
+        data = response.json()
+        # Adaptamos el formato para el frontend
+        token = data.get("data", {}).get("token")
+        if not token:
+            return jsonify({"error": "No se recibió token"}), 500
+        return jsonify({"access_token": token}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # -------------------------------
 # Preguntas a PDFs
