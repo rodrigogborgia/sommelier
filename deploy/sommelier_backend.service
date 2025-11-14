@@ -17,7 +17,6 @@ Environment=HEYGEN_API_KEY=changeme
 # Ejecutar comandos Pre como root
 PermissionsStartOnly=true
 
-
 # Activar entorno virtual y lanzar Gunicorn en 8000
 ExecStart=/srv/sommelier_backend/venv/bin/gunicorn \
           --workers 3 \

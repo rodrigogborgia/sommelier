@@ -6,13 +6,12 @@ import chromadb
 from chromadb.utils import embedding_functions
 import requests
 
-# Cargar variables de entorno (solo en desarrollo)
+# Cargar variables de entorno (solo en desarrollo/local)
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
 
-# Variables de entorno globales
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Variables globales que no cambian
 PORT = int(os.getenv("PORT", 5000))
 CHROMADB_PATH = os.getenv("CHROMADB_PATH", "./chroma_db")
 
@@ -23,7 +22,7 @@ collection = client.get_or_create_collection(
     embedding_function=embedding_functions.DefaultEmbeddingFunction()
 )
 
-# Indexar PDFs al iniciar (solo una vez)
+# Indexar PDFs al iniciar
 pdf_dir = os.path.join(os.path.dirname(__file__), "pdfs")
 for filename in os.listdir(pdf_dir):
     if filename.endswith(".pdf"):
@@ -52,7 +51,7 @@ def api_healthcheck():
     return jsonify({"status": "ok"}), 200
 
 # -------------------------------
-# HeyGen endpoints seguros
+# HeyGen endpoints
 # -------------------------------
 @app.route("/api/avatars", methods=["GET"])
 def get_avatars():
