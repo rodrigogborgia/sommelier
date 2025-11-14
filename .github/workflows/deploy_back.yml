@@ -65,16 +65,38 @@ jobs:
       - name: 🔄 Restart backend service
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo systemctl restart sommelier_backend.service || true
+            sudo systemctl restart sommelier_backend
           "
 
-      - name: 🩺 Healthcheck backend
+      - name: 🩺 Check backend health
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sleep 5 &&
-            curl -s --fail http://127.0.0.1:5000/health > /home/sommelier/backend_check.json || echo '{\"status\":\"fail\"}' > /home/sommelier/backend_check.json
+            curl -f http://127.0.0.1:8000/api/healthcheck > /home/sommelier/backend_check.json || echo '{\"status\":\"fail\"}' > /home/sommelier/backend_check.json
           "
           scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/backend_check.json .
+
+      - name: 🔑 Check access token endpoint
+        run: |
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            curl -s -X POST http://127.0.0.1:8000/api/get-access-token > /home/sommelier/access_token_check.json || echo '{\"error\":\"fail\"}' > /home/sommelier/access_token_check.json
+          "
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/access_token_check.json .
+
+      - name: 📤 Upload access token check
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-access-token
+          path: access_token_check.json
+
+      - name: ✅ Validate access token
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          if [ "$(jq -r '.access_token' access_token_check.json)" == "null" ]; then
+            echo "❌ No se recibió access_token en la respuesta"
+            exit 1
+          fi
+          echo "✅ Access token recibido correctamente"
 
       - name: ⚙️ Copy Nginx config
         run: |
