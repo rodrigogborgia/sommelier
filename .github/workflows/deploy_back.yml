@@ -56,8 +56,8 @@ jobs:
         run: |
           scp -o StrictHostKeyChecking=yes deploy/sommelier_backend.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/sommelier_backend.service
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo sed -i 's|OPENAI_API_KEY=.*|Environment=OPENAI_API_KEY=${OPENAI_API_KEY}|' /home/sommelier/sommelier_backend.service &&
-            sudo sed -i 's|HEYGEN_API_KEY=.*|Environment=HEYGEN_API_KEY=${HEYGEN_API_KEY}|' /home/sommelier/sommelier_backend.service &&
+            sudo sed -i 's|^Environment=OPENAI_API_KEY=.*|Environment=OPENAI_API_KEY=${OPENAI_API_KEY}|' /home/sommelier/sommelier_backend.service &&
+            sudo sed -i 's|^Environment=HEYGEN_API_KEY=.*|Environment=HEYGEN_API_KEY=${HEYGEN_API_KEY}|' /home/sommelier/sommelier_backend.service &&
             sudo mv /home/sommelier/sommelier_backend.service /etc/systemd/system/sommelier_backend.service &&
             sudo systemctl daemon-reload
           "
