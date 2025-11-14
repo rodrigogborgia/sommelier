@@ -17,8 +17,6 @@ Environment=HEYGEN_API_KEY=changeme
 # Ejecutar comandos Pre como root
 PermissionsStartOnly=true
 
-# Matar cualquier proceso que ocupe el puerto 8000 antes de arrancar
-ExecStartPre=/usr/bin/fuser -k 8000/tcp || /bin/true
 
 # Activar entorno virtual y lanzar Gunicorn en 8000
 ExecStart=/srv/sommelier_backend/venv/bin/gunicorn \
