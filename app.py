@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import fitz  # PyMuPDF
 import chromadb
 from chromadb.utils import embedding_functions
+import requests
 
 # Cargar variables de entorno (solo en desarrollo)
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -40,24 +41,76 @@ for filename in os.listdir(pdf_dir):
                     )
         doc.close()
 
-# Healthcheck original
+# -------------------------------
+# Healthchecks
+# -------------------------------
 @app.route("/health", methods=["GET"])
 def health():
     """Endpoint de healthcheck estándar"""
     return jsonify({"status": "ok"}), 200
 
-# Nuevo healthcheck bajo /api/healthcheck
 @app.route("/api/healthcheck", methods=["GET"])
 def api_healthcheck():
     """Endpoint de healthcheck para frontend/Nginx"""
     return jsonify({"status": "ok"}), 200
 
-@app.route("/api/get-access-token", methods=["GET"])
-def get_access_token():
+# -------------------------------
+# HeyGen endpoints seguros
+# -------------------------------
+@app.route("/api/avatars", methods=["GET"])
+def get_avatars():
+    """Lista de avatares disponibles en HeyGen"""
     if not HEYGEN_API_KEY:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
-    return jsonify({"access_token": "mocked_token"}), 200
 
+    try:
+        response = requests.get(
+            "https://api.heygen.com/v1/avatars",
+            headers={"X-Api-Key": HEYGEN_API_KEY}
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/create-session", methods=["POST"])
+def create_session():
+    """Crea una sesión de avatar parlante en HeyGen"""
+    if not HEYGEN_API_KEY:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+
+    payload = request.get_json() or {}
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/session",
+            headers={"X-Api-Key": HEYGEN_API_KEY},
+            json=payload
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/send-message", methods=["POST"])
+def send_message():
+    """Envía un mensaje a la sesión activa de HeyGen"""
+    if not HEYGEN_API_KEY:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+
+    payload = request.get_json() or {}
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/session/message",
+            headers={"X-Api-Key": HEYGEN_API_KEY},
+            json=payload
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# -------------------------------
+# Preguntas a PDFs
+# -------------------------------
 @app.route("/api/ask", methods=["POST"])
 def ask():
     data = request.get_json()
@@ -79,5 +132,8 @@ def ask():
     else:
         return jsonify({"answer": "No encontré información en los PDFs."}), 200
 
+# -------------------------------
+# Main
+# -------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
