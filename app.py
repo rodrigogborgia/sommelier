@@ -118,10 +118,13 @@ def get_access_token():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
 
     try:
+        # Llamada a HeyGen para crear token de streaming
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.createToken",
+            "https://api.heygen.com/v1/streaming.create_token",  # ✅ corregido: guion bajo
             headers={"X-Api-Key": HEYGEN_API_KEY}
         )
+
+        # Devuelve el JSON tal cual lo manda HeyGen
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
