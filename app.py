@@ -61,7 +61,7 @@ def get_avatars():
 
     try:
         response = requests.get(
-            "https://api.heygen.com/v1/avatars",
+            "https://api.heygen.com/v2/avatars",
             headers={"X-Api-Key": api_key}
         )
         return jsonify(response.json()), response.status_code
@@ -76,11 +76,20 @@ def create_session():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
 
     payload = request.get_json() or {}
+    avatar_id = payload.get("avatar_id")
+    voice_id = payload.get("voice_id")
+    language = payload.get("language", "en")
+
     try:
         response = requests.post(
-            "https://api.heygen.com/v1/session",
+            "https://api.heygen.com/v2/streaming.new",
             headers={"X-Api-Key": api_key},
-            json=payload
+            json={
+                "avatar_id": avatar_id,
+                "voice": {"voice_id": voice_id},
+                "language": language,
+                "quality": "medium"
+            }
         )
         return jsonify(response.json()), response.status_code
     except Exception as e:
@@ -96,7 +105,7 @@ def send_message():
     payload = request.get_json() or {}
     try:
         response = requests.post(
-            "https://api.heygen.com/v1/session/message",
+            "https://api.heygen.com/v2/streaming.send",
             headers={"X-Api-Key": api_key},
             json=payload
         )
@@ -113,12 +122,11 @@ def get_access_token():
 
     try:
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.create_token",
+            "https://api.heygen.com/v2/streaming.create_token",
             headers={"X-Api-Key": api_key}
         )
-        print("HeyGen raw response:", response.text)  # 👈 misma indentación
+        print("HeyGen raw response:", response.text)
         data = response.json()
-        # Adaptamos el formato para el frontend
         token = data.get("data", {}).get("token")
         if not token:
             return jsonify({"error": "No se recibió token"}), 500
@@ -158,4 +166,3 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
 
 print(app.url_map)
-
