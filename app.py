@@ -116,6 +116,7 @@ def get_access_token():
             "https://api.heygen.com/v1/streaming.create_token",
             headers={"X-Api-Key": api_key}
         )
+        print("HeyGen raw response:", response.text)  # 👈 misma indentación
         data = response.json()
         # Adaptamos el formato para el frontend
         token = data.get("data", {}).get("token")
@@ -155,3 +156,6 @@ def ask():
 # -------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
+
+print(app.url_map)
+
