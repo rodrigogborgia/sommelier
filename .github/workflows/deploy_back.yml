@@ -43,6 +43,12 @@ jobs:
             . \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/sommelier_backend/
 
+      - name: 🔧 Fix .git permissions
+        run: |
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo chown -R sommelier:sommelier /srv/sommelier_backend/.git
+          "
+
       - name: 📦 Install dependencies on server
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
@@ -65,7 +71,7 @@ jobs:
       - name: 🔄 Restart backend service
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo systemctl restart sommelier_backend
+            sudo systemctl restart sommelier_backend.service
           "
 
       - name: 🩺 Check backend health
