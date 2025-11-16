@@ -10,9 +10,8 @@ Group=sommelier
 # Directorio de trabajo
 WorkingDirectory=/srv/sommelier_backend
 
-# Variables de entorno (se reemplazan en el workflow con sed)
-Environment=OPENAI_API_KEY=changeme
-Environment=HEYGEN_API_KEY=changeme
+# Variables de entorno desde archivo .env
+EnvironmentFile=/srv/sommelier_backend/.env
 
 # Ejecutar comandos Pre como root
 PermissionsStartOnly=true
