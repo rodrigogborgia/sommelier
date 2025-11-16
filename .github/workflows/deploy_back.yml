@@ -36,6 +36,12 @@ jobs:
       - name: 🚀 Rsync backend to server
         run: |
           rsync -avz --delete \
+            --exclude 'venv/' \
+            --exclude '__pycache__/' \
+            --exclude '*.pyc' \
+            --exclude 'chroma_db/' \
+            --exclude '.git/' \
+            --exclude '.vscode/' \
             -e "ssh -o StrictHostKeyChecking=yes" \
             . \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/srv/sommelier_backend/
