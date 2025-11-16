@@ -122,8 +122,13 @@ def get_access_token():
 
     try:
         response = requests.post(
-            "https://api.heygen.com/v2/streaming.create_token",
-            headers={"X-Api-Key": api_key}
+            "https://api.heygen.com/v1/streaming.create_token",
+            headers={
+                "x-api-key": api_key,
+                "accept": "application/json",
+                "content-type": "application/json"
+            },
+            json={}  # 👈 body vacío requerido
         )
         print("HeyGen raw response:", response.text)
         data = response.json()
@@ -133,8 +138,7 @@ def get_access_token():
         return jsonify({"access_token": token}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 # -------------------------------
 # Preguntas a PDFs
 # -------------------------------
