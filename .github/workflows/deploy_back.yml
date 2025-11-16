@@ -106,7 +106,7 @@ jobs:
 
       - name: ⚙️ Copy Nginx config
         run: |
-          scp -o StrictHostKeyChecking=yes deploy/nginx/sommelier_nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/sommelier_nginx.conf
+          scp -o StrictHostKeyChecking=yes deploy/nginx/sites-available/sommelier_nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/sommelier_nginx.conf
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
             sudo mv /home/sommelier/sommelier_nginx.conf /etc/nginx/sites-available/sommelier_nginx.conf &&
             sudo ln -sf /etc/nginx/sites-available/sommelier_nginx.conf /etc/nginx/sites-enabled/sommelier_nginx.conf &&
