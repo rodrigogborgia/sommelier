@@ -7,9 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      HEYGEN_API_KEY: ${{ secrets.HEYGEN_API_KEY }}
 
     steps:
       - name: 📥 Checkout repo
@@ -58,19 +55,10 @@ jobs:
             pip install -r requirements.txt
           "
 
-      - name: ⚙️ Copy systemd service file
-        run: |
-          scp -o StrictHostKeyChecking=yes deploy/sommelier_backend.service ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/sommelier_backend.service
-          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-            sudo sed -i 's|^Environment=OPENAI_API_KEY=.*|Environment=OPENAI_API_KEY=${OPENAI_API_KEY}|' /home/sommelier/sommelier_backend.service &&
-            sudo sed -i 's|^Environment=HEYGEN_API_KEY=.*|Environment=HEYGEN_API_KEY=${HEYGEN_API_KEY}|' /home/sommelier/sommelier_backend.service &&
-            sudo mv /home/sommelier/sommelier_backend.service /etc/systemd/system/sommelier_backend.service &&
-            sudo systemctl daemon-reload
-          "
-
       - name: 🔄 Restart backend service
         run: |
           ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            sudo systemctl daemon-reload &&
             sudo systemctl restart sommelier_backend.service
           "
 
@@ -94,15 +82,6 @@ jobs:
         with:
           name: backend-access-token
           path: access_token_check.json
-
-      - name: ✅ Validate access token
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          if [ "$(jq -r '.access_token' access_token_check.json)" == "null" ]; then
-            echo "❌ No se recibió token en la respuesta"
-            exit 1
-          fi
-          echo "✅ Token recibido correctamente"
 
       - name: ⚙️ Copy Nginx config
         run: |
