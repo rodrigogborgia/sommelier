@@ -5,7 +5,7 @@ import fitz  # PyMuPDF
 import chromadb
 from chromadb.utils import embedding_functions
 import requests
-from flask_cors import CORS  # 👈 importar CORS
+from flask_cors import CORS
 
 # Cargar variables de entorno (solo en desarrollo/local)
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -18,7 +18,7 @@ app = Flask(__name__)
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://tusommeliervirtual.com").split(",")
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
-# Variables globales que no cambian
+# Variables globales
 PORT = int(os.getenv("PORT", 5000))
 CHROMADB_PATH = os.getenv("CHROMADB_PATH", "./chroma_db")
 
@@ -49,17 +49,31 @@ for filename in os.listdir(pdf_dir):
 # -------------------------------
 # Healthchecks
 # -------------------------------
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"}), 200
-
 @app.route("/api/healthcheck", methods=["GET"])
 def api_healthcheck():
+    return jsonify({"status": "ok"}), 200
+
+@app.route("/healthcheck", methods=["GET"])
+def root_healthcheck():
     return jsonify({"status": "ok"}), 200
 
 # -------------------------------
 # HeyGen endpoints
 # -------------------------------
+@app.route("/api/get-access-token", methods=["POST"])
+def get_access_token():
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+    try:
+        response = requests.post(
+            "https://api.heygen.com/v1/streaming.create_token",
+            headers={"X-Api-Key": api_key}
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/avatars", methods=["GET"])
 def get_avatars():
     api_key = os.getenv("HEYGEN_API_KEY")
@@ -75,12 +89,25 @@ def get_avatars():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ... (resto de endpoints igual que ya tenés)
+# -------------------------------
+# Query PDFs endpoint
+# -------------------------------
+@app.route("/api/query", methods=["POST"])
+def query_pdfs():
+    data = request.get_json()
+    question = data.get("question")
+    if not question:
+        return jsonify({"error": "Pregunta requerida"}), 400
+
+    try:
+        results = collection.query(query_texts=[question], n_results=3)
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # -------------------------------
 # Main
 # -------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
-
-print(app.url_map)
+    

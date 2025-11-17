@@ -89,6 +89,21 @@ jobs:
           name: backend-access-token
           path: access_token_check.json
 
+      - name: 📄 Check query endpoint
+        run: |
+          ssh -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
+            curl -s -X POST http://127.0.0.1:8000/api/query \
+              -H 'Content-Type: application/json' \
+              -d '{\"question\":\"test\"}' > /home/sommelier/query_check.json || echo '{\"error\":\"fail\"}' > /home/sommelier/query_check.json
+          "
+          scp -o StrictHostKeyChecking=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/query_check.json .
+
+      - name: 📤 Upload query check
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-query
+          path: query_check.json
+
       - name: ⚙️ Copy Nginx config
         run: |
           scp -o StrictHostKeyChecking=yes deploy/nginx/sites-available/sommelier_nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/sommelier/sommelier_nginx.conf
