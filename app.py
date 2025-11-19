@@ -71,15 +71,22 @@ def get_access_token():
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 "avatar_id": "Dexter_Doctor_Standing2_public",
-                "voice_id": "1a32e06dde934e69ba2a98a71675dc16"  # Alonso - Professional (Spanish, male)
+                "voice_id": "1a32e06dde934e69ba2a98a71675dc16"
             }
         )
-        data = response.json()
-        token = data.get("data", {}).get("client_secret")
-        return jsonify({"data": {"token": token}, "error": None}), response.status_code
+        print("HeyGen raw response:", response.text)
+
+        # Intentar parsear JSON solo si el content-type es correcto
+        if "application/json" in response.headers.get("Content-Type", ""):
+            data = response.json()
+            token = data.get("data", {}).get("client_secret")
+            return jsonify({"data": {"token": token}, "error": None}), response.status_code
+        else:
+            return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": response.text}), 500
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route("/api/avatars", methods=["GET"])
 def get_avatars():
     api_key = os.getenv("HEYGEN_API_KEY")
@@ -90,9 +97,17 @@ def get_avatars():
             "https://api.heygen.com/v2/avatars",
             headers={"Authorization": f"Bearer {api_key}"}
         )
-        return jsonify(response.json()), response.status_code
+        print("[AVATARS] Status:", response.status_code)
+        print("[AVATARS] Headers:", response.headers)
+        print("[AVATARS] Raw response:", response.text)
+
+        if "application/json" in response.headers.get("Content-Type", ""):
+            return jsonify(response.json()), response.status_code
+        else:
+            return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": response.text}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/voices", methods=["GET"])
 def get_voices():
@@ -104,8 +119,15 @@ def get_voices():
             "https://api.heygen.com/v2/voices",
             headers={"Authorization": f"Bearer {api_key}"}
         )
-        voices = response.json()
-        return jsonify(voices), response.status_code
+        print("[VOICES] Status:", response.status_code)
+        print("[VOICES] Headers:", response.headers)
+        print("[VOICES] Raw response:", response.text)
+
+        if "application/json" in response.headers.get("Content-Type", ""):
+            voices = response.json()
+            return jsonify(voices), response.status_code
+        else:
+            return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": response.text}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
