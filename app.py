@@ -67,7 +67,7 @@ def get_access_token():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
         response = requests.post(
-            "https://api.heygen.com/v2/streaming.create",  # ✅ actualizado a v2
+            "https://api.heygen.com/v2/streaming.create_session",  # ✅ actualizado a v2
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 "avatar_id": "Dexter_Doctor_Standing2_public",
