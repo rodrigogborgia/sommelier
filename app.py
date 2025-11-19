@@ -167,8 +167,10 @@ def start_session():
             }
         )
         data = safe_json_response("NEW_SESSION", response)
-        token = data.get("data", {}).get("client_secret")
+        token = data.get("data", {}).get("access_token")  # ✅ este es el token válido
         session_id = data.get("data", {}).get("session_id")
+        livekit_agent_token = data.get("data", {}).get("livekit_agent_token")
+        realtime_endpoint = data.get("data", {}).get("realtime_endpoint")
 
         if not token or not session_id:
             return jsonify({"error": "No se recibió token o session_id de HeyGen", "raw": data}), 500
