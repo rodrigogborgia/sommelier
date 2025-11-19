@@ -67,16 +67,17 @@ def get_access_token():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.create",
+            "https://api.heygen.com/v2/streaming.create",  # ✅ actualizado a v2
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 "avatar_id": "Dexter_Doctor_Standing2_public",
                 "voice_id": "1a32e06dde934e69ba2a98a71675dc16"
             }
         )
-        print("HeyGen raw response:", response.text)
+        print("[STREAMING] Status:", response.status_code)
+        print("[STREAMING] Headers:", response.headers)
+        print("[STREAMING] Raw response:", response.text)
 
-        # Intentar parsear JSON solo si el content-type es correcto
         if "application/json" in response.headers.get("Content-Type", ""):
             data = response.json()
             token = data.get("data", {}).get("client_secret")
@@ -86,7 +87,8 @@ def get_access_token():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
+
 @app.route("/api/avatars", methods=["GET"])
 def get_avatars():
     api_key = os.getenv("HEYGEN_API_KEY")
@@ -130,6 +132,7 @@ def get_voices():
             return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": response.text}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # -------------------------------
 # Query PDFs endpoint
