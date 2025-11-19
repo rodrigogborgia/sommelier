@@ -108,7 +108,15 @@ def get_voices():
             headers={"Authorization": f"Bearer {api_key}"}
         )
         print("Respuesta HeyGen voices:", response.status_code, response.text)  # log para debug
-        return jsonify(response.json()), response.status_code
+        voices = response.json()
+
+        # Filtrar solo voces masculinas en español
+        filtered = [
+            v for v in voices.get("data", [])
+            if v.get("gender") == "male" and v.get("language", "").startswith("es")
+        ]
+
+        return jsonify({"data": filtered}), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
