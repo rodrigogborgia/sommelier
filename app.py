@@ -67,7 +67,7 @@ def get_access_token():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
         response = requests.post(
-            "https://api.heygen.com/v2/streaming.create_session",  # ✅ actualizado a v2
+            "https://api.heygen.com/v1/streaming.create_token",  # ✅ endpoint correcto
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 "avatar_id": "Dexter_Doctor_Standing2_public",
@@ -75,12 +75,11 @@ def get_access_token():
             }
         )
         print("[STREAMING] Status:", response.status_code)
-        print("[STREAMING] Headers:", response.headers)
         print("[STREAMING] Raw response:", response.text)
 
         if "application/json" in response.headers.get("Content-Type", ""):
             data = response.json()
-            token = data.get("data", {}).get("client_secret")
+            token = data.get("data", {}).get("token")  # ✅ ahora es "token"
             return jsonify({"data": {"token": token}, "error": None}), response.status_code
         else:
             return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": response.text}), 500
