@@ -66,21 +66,18 @@ def get_access_token():
     if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
-        # ✅ Endpoint correcto: streaming.create
+        # ⚡ Endpoint correcto para crear sesión de streaming
         response = requests.post(
             "https://api.heygen.com/v1/streaming.create",
             headers={"Authorization": f"Bearer {api_key}"},
             json={
-                # parámetros básicos de la sesión (ajustar según tu caso)
-                "avatar": "default",
-                "voice": "alloy"
+                "avatar_id": "Dexter_Doctor_Standing2_public",  # 👈 tu avatar elegido
+                "voice_id": "VOZ_ID_REAL"                      # 👈 reemplazar con un voice_id válido
             }
         )
+        print("Respuesta HeyGen:", response.text)  # log para debug
         data = response.json()
-
-        # HeyGen devuelve { "data": { "client_secret": "..." } }
         token = data.get("data", {}).get("client_secret")
-
         return jsonify({"data": {"token": token}, "error": None}), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -90,10 +87,23 @@ def get_avatars():
     api_key = os.getenv("HEYGEN_API_KEY")
     if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
-
     try:
         response = requests.get(
             "https://api.heygen.com/v2/avatars",
+            headers={"Authorization": f"Bearer {api_key}"}
+        )
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/voices", methods=["GET"])
+def get_voices():
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+    try:
+        response = requests.get(
+            "https://api.heygen.com/v1/voices",
             headers={"Authorization": f"Bearer {api_key}"}
         )
         return jsonify(response.json()), response.status_code
