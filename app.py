@@ -139,21 +139,31 @@ def get_voices():
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
-# HeyGen streaming session (new_session)
+# HeyGen streaming session (new)
 # -------------------------------
 @app.route("/api/start-session", methods=["POST"])
 def start_session():
     try:
         api_key = get_api_key()
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.new_session",
+            "https://api.heygen.com/v1/streaming.new",   # ✅ endpoint correcto
             headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
+                "x-api-key": api_key,                   # ✅ usar x-api-key
+                "accept": "application/json",
+                "content-type": "application/json"
             },
             json={
                 "avatar_id": "Dexter_Doctor_Standing2_public",
-                "voice_id": "1a32e06dde934e69ba2a98a71675dc16"
+                "voice_id": "1a32e06dde934e69ba2a98a71675dc16",
+                "quality": "medium",
+                "video_encoding": "VP8",
+                "disable_idle_timeout": False,
+                "version": "v2",
+                "stt_settings": {
+                    "provider": "deepgram",
+                    "confidence": 0.55
+                },
+                "activity_idle_timeout": 120
             }
         )
         data = safe_json_response("NEW_SESSION", response)
