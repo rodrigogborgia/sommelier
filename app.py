@@ -104,15 +104,25 @@ def get_voices():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
         response = requests.get(
-            "https://api.heygen.com/v2/voices",   # 👈 actualizado a v2
+            "https://api.heygen.com/v2/voices",
             headers={"Authorization": f"Bearer {api_key}"}
         )
         print("Respuesta HeyGen voices:", response.status_code, response.text)  # log para debug
-        voices = response.json()
+
+        # Intentar parsear como JSON
+        try:
+            voices = response.json()
+        except Exception:
+            return jsonify({"error": "Respuesta no es JSON", "raw": response.text}), response.status_code
+
+        # Asegurarnos que voices sea dict y tenga 'data'
+        data = voices.get("data", [])
+        if not isinstance(data, list):
+            return jsonify({"error": "Formato inesperado", "raw": voices}), response.status_code
 
         # Filtrar solo voces masculinas en español
         filtered = [
-            v for v in voices.get("data", [])
+            v for v in data
             if v.get("gender") == "male" and v.get("language", "").startswith("es")
         ]
 
