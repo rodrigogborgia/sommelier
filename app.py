@@ -66,7 +66,7 @@ def get_access_token():
     if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
-        # ⚡ Endpoint correcto para crear sesión de streaming
+        # ⚡ Crear sesión de streaming en HeyGen
         response = requests.post(
             "https://api.heygen.com/v1/streaming.create",
             headers={"Authorization": f"Bearer {api_key}"},
@@ -75,7 +75,7 @@ def get_access_token():
                 "voice_id": "VOZ_ID_REAL"                      # 👈 reemplazar con un voice_id válido
             }
         )
-        print("Respuesta HeyGen:", response.text)  # log para debug
+        print("Respuesta HeyGen streaming:", response.status_code, response.text)  # log para debug
         data = response.json()
         token = data.get("data", {}).get("client_secret")
         return jsonify({"data": {"token": token}, "error": None}), response.status_code
@@ -92,6 +92,7 @@ def get_avatars():
             "https://api.heygen.com/v2/avatars",
             headers={"Authorization": f"Bearer {api_key}"}
         )
+        print("Respuesta HeyGen avatars:", response.status_code, response.text)  # log para debug
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -103,9 +104,10 @@ def get_voices():
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
         response = requests.get(
-            "https://api.heygen.com/v1/voices",
+            "https://api.heygen.com/v2/voices",   # 👈 actualizado a v2
             headers={"Authorization": f"Bearer {api_key}"}
         )
+        print("Respuesta HeyGen voices:", response.status_code, response.text)  # log para debug
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
