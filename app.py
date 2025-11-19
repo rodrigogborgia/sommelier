@@ -66,16 +66,14 @@ def get_access_token():
     if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
-        # ⚡ Crear sesión de streaming en HeyGen
         response = requests.post(
             "https://api.heygen.com/v1/streaming.create",
             headers={"Authorization": f"Bearer {api_key}"},
             json={
-                "avatar_id": "Dexter_Doctor_Standing2_public",  # 👈 tu avatar elegido
-                "voice_id": "VOZ_ID_REAL"                      # 👈 reemplazar con un voice_id válido
+                "avatar_id": "Dexter_Doctor_Standing2_public",
+                "voice_id": "1a32e06dde934e69ba2a98a71675dc16"  # Alonso - Professional (Spanish, male)
             }
         )
-        print("Respuesta HeyGen streaming:", response.status_code, response.text)  # log para debug
         data = response.json()
         token = data.get("data", {}).get("client_secret")
         return jsonify({"data": {"token": token}, "error": None}), response.status_code
@@ -92,7 +90,6 @@ def get_avatars():
             "https://api.heygen.com/v2/avatars",
             headers={"Authorization": f"Bearer {api_key}"}
         )
-        print("Respuesta HeyGen avatars:", response.status_code, response.text)  # log para debug
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -107,26 +104,8 @@ def get_voices():
             "https://api.heygen.com/v2/voices",
             headers={"Authorization": f"Bearer {api_key}"}
         )
-        print("Respuesta HeyGen voices:", response.status_code, response.text)  # log para debug
-
-        # Intentar parsear como JSON
-        try:
-            voices = response.json()
-        except Exception:
-            return jsonify({"error": "Respuesta no es JSON", "raw": response.text}), response.status_code
-
-        # Asegurarnos que voices sea dict y tenga 'data'
-        data = voices.get("data", [])
-        if not isinstance(data, list):
-            return jsonify({"error": "Formato inesperado", "raw": voices}), response.status_code
-
-        # Filtrar solo voces masculinas en español
-        filtered = [
-            v for v in data
-            if v.get("gender") == "male" and v.get("language", "").startswith("es")
-        ]
-
-        return jsonify({"data": filtered}), response.status_code
+        voices = response.json()
+        return jsonify(voices), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
