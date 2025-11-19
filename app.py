@@ -132,6 +132,65 @@ def get_voices():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# -------------------------------
+# HeyGen streaming session
+# -------------------------------
+@app.route("/api/start-session", methods=["POST"])
+def start_session():
+    api_key = os.getenv("HEYGEN_API_KEY")
+    if not api_key:
+        return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
+    try:
+        # 1. Crear token de streaming
+        token_response = requests.post(
+            "https://api.heygen.com/v1/streaming.create_token",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "avatar_id": "Dexter_Doctor_Standing2_public",
+                "voice_id": "1a32e06dde934e69ba2a98a71675dc16"
+            }
+        )
+        print("[TOKEN] Status:", token_response.status_code)
+        print("[TOKEN] Raw response:", token_response.text)
+
+        if "application/json" not in token_response.headers.get("Content-Type", ""):
+            return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": token_response.text}), 500
+
+        token_data = token_response.json()
+        token = token_data.get("data", {}).get("token")
+        if not token:
+            return jsonify({"error": "No se recibió token de HeyGen"}), 500
+
+        # 2. Iniciar sesión de streaming con el token
+        session_response = requests.post(
+            "https://api.heygen.com/v1/streaming.start_session",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={"token": token}
+        )
+        print("[SESSION] Status:", session_response.status_code)
+        print("[SESSION] Raw response:", session_response.text)
+
+        if "application/json" not in session_response.headers.get("Content-Type", ""):
+            return jsonify({"error": "Respuesta no-JSON de HeyGen", "raw": session_response.text}), 500
+
+        session_data = session_response.json()
+        session_id = session_data.get("data", {}).get("session_id")
+
+        return jsonify({
+            "data": {
+                "token": token,
+                "session_id": session_id
+            },
+            "error": None
+        }), session_response.status_code
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 # -------------------------------
 # Query PDFs endpoint
