@@ -66,11 +66,22 @@ def get_access_token():
     if not api_key:
         return jsonify({"error": "HEYGEN_API_KEY no configurado"}), 500
     try:
+        # ✅ Endpoint correcto: streaming.create
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.create_token",
-            headers={"X-Api-Key": api_key}
+            "https://api.heygen.com/v1/streaming.create",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                # parámetros básicos de la sesión (ajustar según tu caso)
+                "avatar": "default",
+                "voice": "alloy"
+            }
         )
-        return jsonify(response.json()), response.status_code
+        data = response.json()
+
+        # HeyGen devuelve { "data": { "client_secret": "..." } }
+        token = data.get("data", {}).get("client_secret")
+
+        return jsonify({"data": {"token": token}, "error": None}), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -83,7 +94,7 @@ def get_avatars():
     try:
         response = requests.get(
             "https://api.heygen.com/v2/avatars",
-            headers={"X-Api-Key": api_key}
+            headers={"Authorization": f"Bearer {api_key}"}
         )
         return jsonify(response.json()), response.status_code
     except Exception as e:
@@ -110,4 +121,3 @@ def query_pdfs():
 # -------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)
-    
