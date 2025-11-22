@@ -26,6 +26,10 @@ ExecStart=/srv/sommelier_backend/venv/bin/gunicorn \
 Environment=PATH=/srv/sommelier_backend/venv/bin:/usr/bin:/usr/local/bin
 Environment=PYTHONUNBUFFERED=1
 
+# ✅ Variable de entorno para Sentry (si no está en .env)
+# Podés dejarla comentada si ya la tenés en /srv/sommelier_backend/.env
+# Environment=SENTRY_DSN=https://<tu_dsn>.ingest.sentry.io/<id>
+
 # Reinicio automático en caso de fallo
 Restart=always
 RestartSec=5
