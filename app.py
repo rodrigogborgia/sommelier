@@ -97,7 +97,11 @@ collection = init_pdf_index()
 def api_healthcheck():
     return jsonify({"status": "ok"}), 200
 
+@app.route("/health", methods=["GET"])
 @app.route("/healthcheck", methods=["GET"])
+def root_healthcheck():
+    return jsonify({"status": "ok"}), 200
+
 def root_healthcheck():
     return jsonify({"status": "ok"}), 200
 
