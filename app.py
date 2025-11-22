@@ -8,6 +8,20 @@ import requests
 from flask_cors import CORS
 
 # -------------------------------
+# Sentry
+# -------------------------------
+import sentry_sdk
+from sentry_sdk.integrations.gunicorn import GunicornIntegration
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),  # ✅ guardá tu DSN en .env
+    integrations=[GunicornIntegration(), FlaskIntegration()],
+    traces_sample_rate=1.0,
+    send_default_pii=True
+)
+
+# -------------------------------
 # Cargar variables de entorno
 # -------------------------------
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -106,8 +120,10 @@ def get_access_token():
         token = data.get("data", {}).get("token")
         return jsonify({"data": {"token": token}, "error": None}), response.status_code
     except RuntimeError as e:
+        sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/avatars", methods=["GET"])
@@ -119,9 +135,8 @@ def get_avatars():
             headers={"Authorization": f"Bearer {api_key}"}
         )
         return jsonify(safe_json_response("AVATARS", response)), response.status_code
-    except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/voices", methods=["GET"])
@@ -133,9 +148,8 @@ def get_voices():
             headers={"Authorization": f"Bearer {api_key}"}
         )
         return jsonify(safe_json_response("VOICES", response)), response.status_code
-    except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
@@ -146,9 +160,9 @@ def start_session():
     try:
         api_key = get_api_key()
         response = requests.post(
-            "https://api.heygen.com/v1/streaming.new",   # ✅ endpoint correcto
+            "https://api.heygen.com/v1/streaming.new",
             headers={
-                "x-api-key": api_key,                   # ✅ usar x-api-key
+                "x-api-key": api_key,
                 "accept": "application/json",
                 "content-type": "application/json"
             },
@@ -167,13 +181,11 @@ def start_session():
             }
         )
         data = safe_json_response("NEW_SESSION", response)
-        token = data.get("data", {}).get("access_token")  # ✅ este es el token válido
+        token = data.get("data", {}).get("access_token")
         session_id = data.get("data", {}).get("session_id")
-        livekit_agent_token = data.get("data", {}).get("livekit_agent_token")
-        realtime_endpoint = data.get("data", {}).get("realtime_endpoint")
 
         if not token or not session_id:
-            return jsonify({"error": "No se recibió token o session_id de HeyGen", "raw": data}), 500
+            raise RuntimeError("No se recibió token o session_id de HeyGen")
 
         return jsonify({
             "data": {
@@ -182,11 +194,9 @@ def start_session():
             },
             "error": None
         }), response.status_code
-    except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
-
 
 # -------------------------------
 # Query PDFs endpoint
@@ -201,6 +211,7 @@ def query_pdfs():
         results = collection.query(query_texts=[question], n_results=3)
         return jsonify(results), 200
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
