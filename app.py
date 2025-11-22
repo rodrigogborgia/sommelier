@@ -11,15 +11,17 @@ from flask_cors import CORS
 # Sentry
 # -------------------------------
 import sentry_sdk
-from sentry_sdk.integrations.gunicorn import GunicornIntegration
 from sentry_sdk.integrations.flask import FlaskIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),  # ✅ guardá tu DSN en .env
-    integrations=[GunicornIntegration(), FlaskIntegration()],
-    traces_sample_rate=1.0,
-    send_default_pii=True
-)
+dsn = os.getenv("SENTRY_DSN")
+if dsn:
+    sentry_sdk.init(
+        dsn=dsn,  # ✅ guardá tu DSN en .env
+        integrations=[FlaskIntegration(), LoggingIntegration(level=None, event_level=None)],
+        traces_sample_rate=1.0,
+        send_default_pii=True
+    )
 
 # -------------------------------
 # Cargar variables de entorno
@@ -102,9 +104,6 @@ def api_healthcheck():
 def root_healthcheck():
     return jsonify({"status": "ok"}), 200
 
-def root_healthcheck():
-    return jsonify({"status": "ok"}), 200
-
 # -------------------------------
 # HeyGen endpoints
 # -------------------------------
@@ -123,9 +122,6 @@ def get_access_token():
         data = safe_json_response("STREAMING", response)
         token = data.get("data", {}).get("token")
         return jsonify({"data": {"token": token}, "error": None}), response.status_code
-    except RuntimeError as e:
-        sentry_sdk.capture_exception(e)
-        return jsonify({"error": str(e)}), 500
     except Exception as e:
         sentry_sdk.capture_exception(e)
         return jsonify({"error": str(e)}), 500
