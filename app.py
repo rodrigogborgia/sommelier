@@ -8,22 +8,6 @@ import requests
 from flask_cors import CORS
 
 # -------------------------------
-# Sentry
-# -------------------------------
-import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
-from sentry_sdk.integrations.logging import LoggingIntegration
-
-dsn = os.getenv("SENTRY_DSN")
-if dsn:
-    sentry_sdk.init(
-        dsn=dsn,  # ✅ guardá tu DSN en .env
-        integrations=[FlaskIntegration(), LoggingIntegration(level=None, event_level=None)],
-        traces_sample_rate=1.0,
-        send_default_pii=True
-    )
-
-# -------------------------------
 # Cargar variables de entorno
 # -------------------------------
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
@@ -123,7 +107,7 @@ def get_access_token():
         token = data.get("data", {}).get("token")
         return jsonify({"data": {"token": token}, "error": None}), response.status_code
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/avatars", methods=["GET"])
@@ -136,7 +120,7 @@ def get_avatars():
         )
         return jsonify(safe_json_response("AVATARS", response)), response.status_code
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/voices", methods=["GET"])
@@ -149,7 +133,7 @@ def get_voices():
         )
         return jsonify(safe_json_response("VOICES", response)), response.status_code
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
@@ -195,7 +179,7 @@ def start_session():
             "error": None
         }), response.status_code
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
@@ -211,7 +195,7 @@ def query_pdfs():
         results = collection.query(query_texts=[question], n_results=3)
         return jsonify(results), 200
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # -------------------------------
