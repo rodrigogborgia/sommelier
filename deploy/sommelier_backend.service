@@ -17,7 +17,8 @@ EnvironmentFile=/srv/sommelier_backend/.env
 PermissionsStartOnly=true
 
 # Activar entorno virtual y lanzar Gunicorn en 8000
-ExecStart=/srv/sommelier_backend/venv/bin/gunicorn \
+ExecStart=/srv/sommelier_backend/venv/bin/newrelic-admin run-program
+          /srv/sommelier_backend/venv/bin/gunicorn \
           --workers 3 \
           --bind 127.0.0.1:8000 \
           app:app
