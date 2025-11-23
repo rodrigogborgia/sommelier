@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 requests==2.32.3
 numpy<2.0
 flask-cors==4.0.0
+newrelic==10.3.0
